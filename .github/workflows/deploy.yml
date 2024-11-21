@@ -15,7 +15,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '18' # or your preferred version
+          node-version: "18" # or your preferred version
 
       - name: Install Dependencies
         run: npm install # or yarn install
@@ -23,12 +23,12 @@ jobs:
       - name: Build
         run: npm run build # or yarn build
         env:
-          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+          VITE_API_URL: ${{ vars.VITE_API_URL }}
           VITE_AUTH_KEY: ${{ secrets.VITE_AUTH_KEY }}
-          VITE_ALL_STATIONS_KEY: ${{ secrets.VITE_ALL_STATIONS_KEY }}
+          VITE_ALL_STATIONS_KEY: ${{ vars.VITE_ALL_STATIONS_KEY }}
 
       - name: Deploy
         uses: JamesIves/github-pages-deploy-action@v4
         with:
           folder: dist # or your build output directory
-          branch: gh-pages 
+          branch: gh-pages

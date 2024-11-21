@@ -10,3 +10,6 @@ This application is 100% prompted just for fun.
 - Vite
 - TypeScript
 - TailwindCSS
+
+
+https://markus-holm.github.io/forsenat/
