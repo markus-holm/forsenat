@@ -18,13 +18,8 @@ export interface DelayInfo {
 
 export interface TrainStation {
   LocationSignature: string;
-  AdvertisedLocationName: string;
-  CountryCode: string;
-}
-
-export interface StationData {
-  LocationSignature: string;
   OfficialLocationName: string;
+  CountryCode: string;
 }
 
 export type DelayType = 'small' | 'medium' | 'severe' | 'all'; 

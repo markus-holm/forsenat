@@ -1,4 +1,4 @@
-import { TrainAnnouncement, TrainStation, StationData } from '../types/types';
+import { TrainAnnouncement, TrainStation } from '../types/types';
 
 export class TrainService {
   private static readonly API_URL = '/api/trafikverket/data.json';
@@ -49,7 +49,7 @@ export class TrainService {
       const data = await response.json();
       const stations = data?.RESPONSE?.RESULT?.[0]?.TrainStation || [];
       
-      const stationData: StationData[] = stations.map((station: StationData) => ({
+      const stationData: TrainStation[] = stations.map((station: TrainStation) => ({
         LocationSignature: station.LocationSignature,
         OfficialLocationName: station.OfficialLocationName,
       }));
@@ -68,13 +68,13 @@ export class TrainService {
     // First check the cache
     const cachedStations = localStorage.getItem(this.ALL_STATIONS_KEY);
     if (cachedStations) {
-      const stations: StationData[] = JSON.parse(cachedStations);
+      const stations: TrainStation[] = JSON.parse(cachedStations);
       const station = stations.find(s => s.LocationSignature === stationCode);
       
       if (station) {
         return {
           LocationSignature: station.LocationSignature,
-          AdvertisedLocationName: station.OfficialLocationName,
+          OfficialLocationName: station.OfficialLocationName,
           CountryCode: 'SE'
         };
       }
@@ -130,7 +130,7 @@ export class TrainService {
   public static async getStationName(stationCode: string): Promise<string> {
     try {
       const station = await this.getTrainStation(stationCode);
-      return station?.AdvertisedLocationName || stationCode;
+      return station?.OfficialLocationName || stationCode;
     } catch (error) {
       console.error('Error getting station name:', error);
       return stationCode;

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { TrainAnnouncement, DelayType, StationData } from "../types/types";
+import { TrainAnnouncement, DelayType } from "../types/types";
 import DelayDisplay from "./DelayDisplay";
 import { TrainService } from "../services/TrainService";
 
@@ -16,6 +16,7 @@ const TrainInfo: React.FC = () => {
 
   const loadStationName = async (locationCode: string) => {
     const name = await TrainService.getStationName(locationCode);
+    console.log(name);
     setFromToStations((prev) => ({
       ...prev,
       [locationCode]: name,
