@@ -18,6 +18,7 @@ const TrainInfo: React.FC = () => {
   const inputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
   const [inputValue, setInputValue] = useState("");
+  const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -200,6 +201,44 @@ const TrainInfo: React.FC = () => {
     }).length;
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!showSuggestions) {
+      return;
+    }
+
+    switch (e.key) {
+      case "ArrowDown":
+        e.preventDefault();
+        setSelectedSuggestionIndex((prev) =>
+          prev < suggestions.length - 1 ? prev + 1 : prev
+        );
+        break;
+      case "ArrowUp":
+        e.preventDefault();
+        setSelectedSuggestionIndex((prev) => (prev > 0 ? prev - 1 : -1));
+        break;
+      case "Enter":
+        e.preventDefault();
+        if (selectedSuggestionIndex >= 0) {
+          handleStationSelect(suggestions[selectedSuggestionIndex]);
+        }
+        break;
+      case "Escape":
+        e.preventDefault();
+        setShowSuggestions(false);
+        setSelectedSuggestionIndex(-1);
+        break;
+      case "Tab":
+        if (showSuggestions) {
+          e.preventDefault();
+          if (selectedSuggestionIndex >= 0) {
+            handleStationSelect(suggestions[selectedSuggestionIndex]);
+          }
+        }
+        break;
+    }
+  };
+
   return (
     <div className="max-w-2xl mx-auto p-4">
       <form onSubmit={handleSubmit} className="mb-8">
@@ -210,20 +249,46 @@ const TrainInfo: React.FC = () => {
               type="text"
               value={inputValue}
               onChange={handleInputChange}
+              onKeyDown={handleKeyDown}
               placeholder="Enter station name"
               className="w-full p-2 border rounded"
+              aria-label="Station search"
+              aria-expanded={showSuggestions}
+              aria-controls="station-suggestions"
+              aria-activedescendant={
+                selectedSuggestionIndex >= 0
+                  ? `suggestion-${suggestions[selectedSuggestionIndex].LocationSignature}`
+                  : undefined
+              }
+              role="combobox"
               required
             />
             {showSuggestions && (
               <div
                 ref={suggestionsRef}
+                id="station-suggestions"
                 className="absolute z-10 w-full mt-1 bg-white border rounded-md shadow-lg max-h-60 overflow-auto"
+                role="listbox"
               >
-                {suggestions.map((station) => (
+                {suggestions.map((station, index) => (
                   <div
                     key={station.LocationSignature}
-                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                    id={`suggestion-${station.LocationSignature}`}
+                    className={`px-4 py-2 cursor-pointer ${
+                      index === selectedSuggestionIndex
+                        ? "bg-blue-100"
+                        : "hover:bg-gray-100"
+                    }`}
                     onClick={() => handleStationSelect(station)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        handleStationSelect(station);
+                      }
+                    }}
+                    role="option"
+                    aria-selected={index === selectedSuggestionIndex}
+                    tabIndex={0}
                   >
                     <span className="font-medium">
                       {station.OfficialLocationName}
@@ -236,7 +301,8 @@ const TrainInfo: React.FC = () => {
           <button
             type="submit"
             disabled={loading}
-            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 disabled:bg-blue-300"
+            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 disabled:bg-blue-300 focus:ring-2 focus:ring-blue-400 focus:outline-none"
+            aria-label={loading ? "Loading..." : "Check Delays"}
           >
             {loading ? "Loading..." : "Check Delays"}
           </button>
@@ -250,59 +316,42 @@ const TrainInfo: React.FC = () => {
           <div className="mb-4 text-lg font-semibold">
             Station: {stationName}
           </div>
-          <div className="mb-4 flex gap-2 flex-wrap">
-            <button
-              onClick={() => setSelectedDelayType("all")}
-              className={`px-3 py-1 rounded flex items-center gap-2 ${
-                selectedDelayType === "all"
-                  ? "bg-neutral-500 text-white"
-                  : "bg-neutral-300 hover:bg-neutral-500 hover:text-white"
-              }`}
-            >
-              <span>All Delays</span>
-              <span className="px-2 py-0.5 rounded-full text-sm text-white bg-cyan-500">
-                {getDelayCount("all")}
-              </span>
-            </button>
-            <button
-              onClick={() => setSelectedDelayType("small")}
-              className={`px-3 py-1 rounded flex items-center gap-2 ${
-                selectedDelayType === "small"
-                  ? "bg-neutral-500 text-white"
-                  : "bg-neutral-300 hover:bg-neutral-500 hover:text-white"
-              }`}
-            >
-              <span>Small (≤5min)</span>
-              <span className="px-2 py-0.5 rounded-full text-sm text-white bg-blue-500">
-                {getDelayCount("small")}
-              </span>
-            </button>
-            <button
-              onClick={() => setSelectedDelayType("medium")}
-              className={`px-3 py-1 rounded flex items-center gap-2 ${
-                selectedDelayType === "medium"
-                  ? "bg-neutral-500 text-white"
-                  : "bg-neutral-300 hover:bg-neutral-500 hover:text-white"
-              }`}
-            >
-              <span>Medium (6-19min)</span>
-              <span className="px-2 py-0.5 rounded-full text-sm text-white bg-yellow-500">
-                {getDelayCount("medium")}
-              </span>
-            </button>
-            <button
-              onClick={() => setSelectedDelayType("severe")}
-              className={`px-3 py-1 rounded flex items-center gap-2 ${
-                selectedDelayType === "severe"
-                  ? "bg-neutral-500 text-white"
-                  : "bg-neutral-300 hover:bg-neutral-500 hover:text-white"
-              }`}
-            >
-              <span>Severe (≥20min)</span>
-              <span className="px-2 py-0.5 rounded-full text-sm text-white bg-red-500">
-                {getDelayCount("severe")}
-              </span>
-            </button>
+          <div
+            className="mb-4 flex gap-2 flex-wrap"
+            role="toolbar"
+            aria-label="Delay filters"
+          >
+            {["all", "small", "medium", "severe"].map((type) => (
+              <button
+                key={type}
+                onClick={() => setSelectedDelayType(type as DelayType)}
+                className={`px-3 py-1 rounded flex items-center gap-2 focus:ring-2 focus:ring-blue-400 focus:outline-none
+                  ${
+                    selectedDelayType === type
+                      ? "bg-neutral-500 text-white"
+                      : "bg-neutral-300 hover:bg-neutral-500 hover:text-white"
+                  }`}
+                aria-pressed={selectedDelayType === type}
+                tabIndex={0}
+              >
+                <span>
+                  {type.charAt(0).toUpperCase() + type.slice(1)} Delays
+                </span>
+                <span
+                  className={`px-2 py-0.5 rounded-full text-sm text-white ${
+                    type === "all"
+                      ? "bg-cyan-500"
+                      : type === "small"
+                      ? "bg-blue-500"
+                      : type === "medium"
+                      ? "bg-yellow-500"
+                      : "bg-red-500"
+                  }`}
+                >
+                  {getDelayCount(type as DelayType)}
+                </span>
+              </button>
+            ))}
           </div>
         </>
       )}
