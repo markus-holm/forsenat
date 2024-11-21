@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { TrainAnnouncement, DelayType } from "../types/types";
+import { useState, useEffect, useRef } from "react";
+import { TrainAnnouncement, DelayType, TrainStation } from "../types/types";
 import DelayDisplay from "./DelayDisplay";
 import { TrainService } from "../services/TrainService";
 
@@ -13,10 +13,62 @@ const TrainInfo: React.FC = () => {
     {}
   );
   const [selectedDelayType, setSelectedDelayType] = useState<DelayType>("all");
+  const [suggestions, setSuggestions] = useState<TrainStation[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const suggestionsRef = useRef<HTMLDivElement>(null);
+  const [inputValue, setInputValue] = useState("");
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        suggestionsRef.current &&
+        !suggestionsRef.current.contains(event.target as Node)
+      ) {
+        setShowSuggestions(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setInputValue(value);
+
+    if (value.length >= 2) {
+      const cachedStations = localStorage.getItem("allTrainStations");
+      if (cachedStations) {
+        const stations: TrainStation[] = JSON.parse(cachedStations);
+        const filtered = stations
+          .filter((station) =>
+            station.OfficialLocationName.toLowerCase().includes(
+              value.toLowerCase()
+            )
+          )
+          .sort((a, b) =>
+            a.OfficialLocationName.localeCompare(b.OfficialLocationName, "sv")
+          )
+          .slice(0, 10);
+
+        setSuggestions(filtered);
+        setShowSuggestions(filtered.length > 0);
+      }
+    } else {
+      setSuggestions([]);
+      setShowSuggestions(false);
+    }
+  };
+
+  const handleStationSelect = (station: TrainStation) => {
+    setInputValue(station.OfficialLocationName);
+    setStationCode(station.LocationSignature);
+    setShowSuggestions(false);
+  };
 
   const loadStationName = async (locationCode: string) => {
     const name = await TrainService.getStationName(locationCode);
-    console.log(name);
     setFromToStations((prev) => ({
       ...prev,
       [locationCode]: name,
@@ -56,6 +108,20 @@ const TrainInfo: React.FC = () => {
     });
   };
 
+  const getLocationSignature = (input: string): string | null => {
+    const cachedStations = localStorage.getItem("allTrainStations");
+    if (cachedStations) {
+      const stations: TrainStation[] = JSON.parse(cachedStations);
+      const station = stations.find(
+        (s) =>
+          s.OfficialLocationName.toLowerCase() === input.toLowerCase() ||
+          s.LocationSignature.toLowerCase() === input.toLowerCase()
+      );
+      return station?.LocationSignature || null;
+    }
+    return null;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -63,10 +129,17 @@ const TrainInfo: React.FC = () => {
     setFromToStations({});
 
     try {
-      const name = await TrainService.getStationName(stationCode);
+      // Try to get LocationSignature from input
+      const locationSignature = getLocationSignature(stationCode);
+
+      if (!locationSignature) {
+        throw new Error("Invalid station name or code");
+      }
+
+      const name = await TrainService.getStationName(locationSignature);
       setStationName(name);
 
-      const data = await TrainService.getTrainAnnouncements(stationCode);
+      const data = await TrainService.getTrainAnnouncements(locationSignature);
 
       // Pre-load all station names
       const stationCodes = new Set<string>();
@@ -130,15 +203,36 @@ const TrainInfo: React.FC = () => {
   return (
     <div className="max-w-2xl mx-auto p-4">
       <form onSubmit={handleSubmit} className="mb-8">
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={stationCode}
-            onChange={(e) => setStationCode(e.target.value.trim())}
-            placeholder="Enter station code (e.g., 'TUL' for Tullinge)"
-            className="flex-1 p-2 border rounded"
-            required
-          />
+        <div className="flex gap-2 relative">
+          <div className="flex-1 relative">
+            <input
+              ref={inputRef}
+              type="text"
+              value={inputValue}
+              onChange={handleInputChange}
+              placeholder="Enter station name"
+              className="w-full p-2 border rounded"
+              required
+            />
+            {showSuggestions && (
+              <div
+                ref={suggestionsRef}
+                className="absolute z-10 w-full mt-1 bg-white border rounded-md shadow-lg max-h-60 overflow-auto"
+              >
+                {suggestions.map((station) => (
+                  <div
+                    key={station.LocationSignature}
+                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                    onClick={() => handleStationSelect(station)}
+                  >
+                    <span className="font-medium">
+                      {station.OfficialLocationName}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
           <button
             type="submit"
             disabled={loading}

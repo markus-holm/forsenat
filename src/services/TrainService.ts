@@ -1,10 +1,9 @@
 import { TrainAnnouncement, TrainStation } from '../types/types';
 
 export class TrainService {
-  private static readonly API_URL = '/api/trafikverket/data.json';
-  private static readonly AUTH_KEY = '0140fbc597b048eabedbee772ccedd9d';
-  private static readonly STATION_CACHE_KEY = 'trainStationCache';
-  private static readonly ALL_STATIONS_KEY = 'allTrainStations';
+  private static readonly API_URL = import.meta.env.VITE_API_URL;
+  private static readonly AUTH_KEY = import.meta.env.VITE_AUTH_KEY;
+  private static readonly ALL_STATIONS_KEY = import.meta.env.VITE_ALL_STATIONS_KEY;
   private static initialized = false;
 
   public static async initialize(): Promise<void> {
